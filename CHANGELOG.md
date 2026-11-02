@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.3.0 - 2026-11-02
+
+Renamed to pi-secret-broker and rebuilt for pi-projects roles.
+
+- Secret sources per role (`keychain:`, `op://` with the role's service-account token only, `env:`, `file:`, `value:`).
+- `broker_run`: role host actions with fixed argv, validated args, clean env, redacted output and an audit log.
+- Removed 1Password Connect handles, the HTTP request tool and the pi-chat broker runtime.
+
 ## v0.2.0 - 2026-05-25
 
 Adds policy/approval/audit UX needed before real homelab use.

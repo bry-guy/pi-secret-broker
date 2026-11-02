@@ -1,34 +1,14 @@
 {
-  "name": "pi-ez-secret-broker",
-  "version": "0.2.0",
-  "description": "Runtime credential handles for pi-chat/Gondolin backed by 1Password Connect.",
+  "name": "@bry-guy/pi-secret-broker",
+  "version": "0.3.0",
+  "description": "Role secrets for pi: resolve them on the host (Keychain, 1Password service accounts) and run role broker actions without the agent seeing them.",
   "type": "module",
   "license": "MIT",
-  "keywords": [
-    "pi-package",
-    "pi-extension",
-    "pi-chat",
-    "gondolin",
-    "1password"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/bry-guy/pi-ez-secret-broker.git"
-  },
-  "bugs": {
-    "url": "https://github.com/bry-guy/pi-ez-secret-broker/issues"
-  },
-  "homepage": "https://github.com/bry-guy/pi-ez-secret-broker#readme",
-  "pi": {
-    "extensions": [
-      "./extensions"
-    ]
-  },
-  "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*",
-    "typebox": "*"
-  },
-  "scripts": {
-    "test": "node --test"
-  }
+  "keywords": ["pi-package", "pi-extension", "secrets", "1password", "gondolin"],
+  "repository": { "type": "git", "url": "git+https://github.com/bry-guy/pi-secret-broker.git" },
+  "homepage": "https://github.com/bry-guy/pi-secret-broker#readme",
+  "files": ["src", "README.md"],
+  "pi": { "extensions": ["./src/extension.ts"] },
+  "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-ai": "*" },
+  "scripts": { "test": "node --test test/*.test.ts" }
 }
