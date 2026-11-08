@@ -2,8 +2,8 @@
 //   keychain:<service>   macOS Keychain generic password (account = $USER)
 //   op://vault/item/field  1Password, read with the role's OP_SERVICE_ACCOUNT_TOKEN only
 //   env:NAME | file:path | value:literal
-//   github-app:op://vault/item  GitHub App installation token (1 h), minted from the item's app-id and private-key
-//                               fields; the App must be installed on exactly one account
+//   github-app:op://vault/item  GitHub App installation token (1 h), minted from the item's app-id, private-key
+//                               and repos fields (token limited to those repos); the App must be installed on exactly one account
 // `op` never falls back to Bryan's desktop app: it runs with a clean env holding only the role's token.
 import { execFileSync } from "node:child_process";
 import { createSign } from "node:crypto";
@@ -69,9 +69,9 @@ function githubAppToken(item: string, opToken: string): string {
 	const b64 = (o: object) => Buffer.from(JSON.stringify(o)).toString("base64url");
 	const unsigned = `${b64({ alg: "RS256", typ: "JWT" })}.${b64({ iat: now - 60, exp: now + 540, iss: op("app-id").trim() })}`;
 	const jwt = `${unsigned}.${createSign("RSA-SHA256").update(unsigned).sign(op("private-key")).toString("base64url")}`;
-	const gh = (method: string, path: string) =>
+	const gh = (method: string, path: string, body?: object) =>
 		JSON.parse(
-			execFileSync("curl", ["-fsS", "-X", method, "-H", "Accept: application/vnd.github+json", "-H", "@-", `https://api.github.com${path}`], {
+			execFileSync("curl", ["-fsS", "-X", method, "-H", "Accept: application/vnd.github+json", "-H", "@-", ...(body ? ["-d", JSON.stringify(body)] : []), `https://api.github.com${path}`], {
 				encoding: "utf8",
 				input: `Authorization: Bearer ${jwt}\n`,
 				env: cleanEnv(),
@@ -80,7 +80,9 @@ function githubAppToken(item: string, opToken: string): string {
 		);
 	const installs = gh("GET", "/app/installations") as { id: number }[];
 	if (installs.length !== 1) throw new Error(`the App has ${installs.length} installations, expected 1`);
-	const res = gh("POST", `/app/installations/${installs[0].id}/access_tokens`) as { token: string; expires_at: string };
+	// The token covers only the item's `repos` (comma-separated names), whatever repos the installation allows.
+	const repos = op("repos").split(",").map((r) => r.trim()).filter(Boolean);
+	const res = gh("POST", `/app/installations/${installs[0].id}/access_tokens`, { repositories: repos }) as { token: string; expires_at: string };
 	appTokens.set(item, { token: res.token, expires: Date.parse(res.expires_at) });
 	return res.token;
 }
