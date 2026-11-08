@@ -27,6 +27,7 @@ In the signed grants file (`~/.pi/agent/pi-roles.json`, edited through `/project
 |---|---|
 | `keychain:<service>` | macOS Keychain generic password, account `$USER` |
 | `op://vault/item/field` | 1Password, read with the role's `OP_SERVICE_ACCOUNT_TOKEN` only. Never Bryan's desktop app. |
+| `github-app:op://vault/item` | GitHub App installation token (1 hour), minted from the item's `app-id` and `private-key` fields. The App must be installed on one account. Cached until 15 minutes before expiry; pi-mounts re-resolves secrets every 30 minutes. |
 | `env:NAME`, `file:path`, `value:text` | Host env var, file contents, literal |
 
 ## Broker actions
