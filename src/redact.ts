@@ -64,7 +64,8 @@ export function redact(text: string, { assignments = false, env = process.env }:
 	if (assignments) {
 		out = out.replace(ASSIGNMENT, (line, pre: string, name: string, raw: string) => {
 			const v = raw.trim().replace(/^(["'])(.*)\1$/, "$2");
-			if (!SECRET_NAME.test(name) || !secretLike(v)) return line;
+			// `$VAR`, `${{ secrets.X }}`, `<your-token>`: a reference or placeholder (scripts, CI files), not a value.
+			if (!SECRET_NAME.test(name) || !secretLike(v) || /^[$<]/.test(v)) return line;
 			rememberSecret(name, v);
 			return `${pre}${name}=${mark(name)}`;
 		});
@@ -86,7 +87,12 @@ function redactJson<T>(value: T, opts: RedactOptions): T {
 	if (value === undefined) return value;
 	const s = JSON.stringify(value);
 	const r = redact(s, opts);
-	return r === s ? value : JSON.parse(r);
+	if (r === s) return value;
+	try {
+		return JSON.parse(r);
+	} catch {
+		return value; // a match that spanned JSON structure: leave it rather than break the tool call
+	}
 }
 
 /** `tool_result`: replacement fields, or undefined when nothing changed. */
@@ -143,13 +149,14 @@ export function redactMessages<M extends Record<string, any>>(messages: M[], env
 	return changed ? out : messages;
 }
 
+const MARKER = /\[redacted:[A-Za-z0-9_-]+\]/;
 const GUARD_REASON = "This text was redacted when you read it. Leave that part of the file untouched (edit around it) or ask the user.";
 
 /** `tool_call`: keeps redaction markers from being written back into files. */
 export function guardWrite(toolName: string, input: Record<string, any>): { block: true; reason: string } | undefined {
 	const texts =
 		toolName === "write" ? [input.content] : toolName === "edit" ? [input.newText, ...(Array.isArray(input.edits) ? input.edits.map((e: any) => e?.newText) : [])] : [];
-	return texts.some((t) => typeof t === "string" && t.includes("[redacted:")) ? { block: true, reason: GUARD_REASON } : undefined;
+	return texts.some((t) => typeof t === "string" && MARKER.test(t)) ? { block: true, reason: GUARD_REASON } : undefined;
 }
 
 /** Streams shell output through `redact` (with rule 3) a line at a time; holds an open PEM block until it ends. */

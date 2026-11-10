@@ -99,6 +99,8 @@ test("write/edit guard", () => {
 	assert.equal(guardWrite("edit", { path: "a", oldText: "a", newText: "[redacted:jwt]" })?.block, true);
 	assert.equal(guardWrite("write", { path: "a", content: "normal" }), undefined);
 	assert.equal(guardWrite("bash", { command: "echo [redacted:x]" }), undefined);
+	// Code and docs that only mention the prefix or a placeholder kind stay editable.
+	assert.equal(guardWrite("write", { path: "a", content: 'if (v.startsWith("[redacted:")) return; // shows [redacted:<kind>]' }), undefined);
 });
 
 test("no secrets: identical text, tool_result unchanged", () => {
@@ -116,4 +118,10 @@ test("user_bash line filter redacts across chunk boundaries", () => {
 	for (let i = 0; i < all.length; i += 7) f.push(Buffer.from(all.slice(i, i + 7)));
 	f.end();
 	assert.equal(out, "a [redacted:github-token]\nAPI_TOKEN=[redacted:API_TOKEN]\n[redacted:private-key]\ntail");
+});
+
+test("assignment lines: references and placeholders are not values", () => {
+	const text = ["API_TOKEN=${1:-fallback-value}", "GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}", "export DB_PASSWORD=$OTHER_PASSWORD", "MY_SECRET=<your-secret-here>"].join("\n");
+	assert.equal(redact(text, { assignments: true, env: {} }), text);
+	assert.equal(redact("${1:-fallback-value} and $OTHER_PASSWORD", { env: {} }), "${1:-fallback-value} and $OTHER_PASSWORD", "nothing was learned");
 });
