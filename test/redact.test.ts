@@ -125,3 +125,9 @@ test("assignment lines: references and placeholders are not values", () => {
 	assert.equal(redact(text, { assignments: true, env: {} }), text);
 	assert.equal(redact("${1:-fallback-value} and $OTHER_PASSWORD", { env: {} }), "${1:-fallback-value} and $OTHER_PASSWORD", "nothing was learned");
 });
+
+test("context: a typed `!command` is redacted on its way to the model", () => {
+	const tok = hits[0][1];
+	const msgs = [{ role: "bashExecution", command: `echo ${tok}`, output: "ok" }];
+	assert.equal(redactMessages(msgs, {})[0].command, "echo " + "[redacted:" + "github-token]");
+});

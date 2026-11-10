@@ -138,7 +138,8 @@ export function redactMessages<M extends Record<string, any>>(messages: M[], env
 	let changed = false;
 	const out = messages.map((m) => {
 		let n = m;
-		for (const key of ["content", "output", "summary"] as const) {
+		// `command`: what the user typed after `!`, stored beside its output.
+		for (const key of ["content", "output", "summary", "command"] as const) {
 			if (!(key in m)) continue;
 			const v = redactParts(m[key], opts);
 			if (v !== m[key]) n = { ...n, [key]: v };
