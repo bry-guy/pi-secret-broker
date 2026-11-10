@@ -58,6 +58,30 @@ A role file (`<repo>/.pi/roles/<role>.json`, read from origin's default branch) 
 Limit: code in the checkout runs with the action's secrets (tofu modules, scripts). That fits the threat model
 (agents making mistakes), not a hostile agent.
 
+## Redaction
+
+In every session (sandboxed or not, with or without a project or role), secret values in tool output are replaced
+by `[redacted:<kind>]` before they reach the transcript or the model:
+
+- **Known values**: env vars of the pi process whose name looks secret (`token`, `secret`, `password`, `credential`,
+  `api_key`, `private_key`, ...; 8+ chars, not a path or a plain URL), and every role secret the broker resolved.
+- **Token shapes**: GitHub, Anthropic, OpenAI-style, Slack, AWS access key ids, 1Password service-account tokens,
+  JWTs and PEM private key blocks (`PATTERNS` in `src/redact.ts`).
+- **`NAME=value` lines** with a secret-looking name, in bash output, `!command` output and reads of dotenv files
+  (`.env`, `.env.*`, `.envrc`, `*.env`; not `.env.example`/`.sample`/`.template`). The name stays, the value goes.
+  Source files are left readable.
+- Any value caught by the last two rules is remembered (up to 500) and redacted wherever it shows up later.
+
+It runs on `tool_result`, on `!command` output, and on every request's messages (`context`, as a backstop). `write`
+and `edit` calls that would put a `[redacted:` marker into a file are blocked. Other extensions can call `redact(text)`
+from `globalThis[Symbol.for("pi-secret-broker.v1")]`.
+
+This is best-effort hygiene, not a security boundary. Values are redacted, not blocked from use: commands still get
+the env. Not covered: encoded or transformed secrets (base64, split, escaped), Kubernetes Secret `data` blobs, live
+partial output shown in the terminal while a command runs, pi's on-disk bash full-output logs, and model thinking
+blocks. Since `!command` output is filtered by running the command through pi's local shell, an extension that runs
+`!` commands elsewhere must load before this one.
+
 ## Changes from pi-ez-secret-broker 0.2
 
 Renamed. 1Password Connect handles, the HTTP request tool and the pi-chat runtime were removed: Gondolin injects HTTP

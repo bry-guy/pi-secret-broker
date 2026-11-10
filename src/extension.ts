@@ -2,11 +2,12 @@
 // Roles and signed grants come from pi-projects in the same pi process (globalThis[Symbol.for("pi-projects.v1")]).
 import { join } from "node:path";
 import { Type } from "@earendil-works/pi-ai";
-import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { createLocalBashOperations, SettingsManager, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { audit, defaultAuditFile, execute, prepare } from "./broker.ts";
+import { guardWrite, lineFilter, redact, redactMessages, redactToolResult } from "./redact.ts";
 import { resolveSecrets, resolveSource } from "./secrets.ts";
 
-(globalThis as any)[Symbol.for("pi-secret-broker.v1")] = { resolveSecrets, resolveSource };
+(globalThis as any)[Symbol.for("pi-secret-broker.v1")] = { resolveSecrets, resolveSource, redact };
 
 const projects = () => (globalThis as any)[Symbol.for("pi-projects.v1")];
 
@@ -21,6 +22,27 @@ function roleFor(ctx: ExtensionContext) {
 }
 
 export default function (pi: ExtensionAPI) {
+	// Redaction runs in every session, with or without a project or role.
+	pi.on("tool_result", (e) => redactToolResult(e));
+	pi.on("context", (e) => {
+		const messages = redactMessages(e.messages);
+		return messages === e.messages ? undefined : { messages };
+	});
+	pi.on("tool_call", (e) => guardWrite(e.toolName, e.input as Record<string, unknown>));
+	// `!command` output: pi's own local shell, with output filtered. The first user_bash handler that returns wins, so
+	// an extension that needs to run `!` commands elsewhere must load before this one.
+	pi.on("user_bash", (e) => {
+		const local = createLocalBashOperations({ shellPath: SettingsManager.create(e.cwd).getShellPath() });
+		return {
+			operations: {
+				exec: (command, cwd, o) => {
+					const f = lineFilter(o.onData);
+					return local.exec(command, cwd, { ...o, onData: f.push }).finally(f.end);
+				},
+			},
+		};
+	});
+
 	pi.registerTool({
 		name: "broker_run",
 		label: "Broker",

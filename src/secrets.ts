@@ -9,6 +9,7 @@ import { execFileSync } from "node:child_process";
 import { createSign } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { homedir, userInfo } from "node:os";
+import { rememberSecret } from "./redact.ts";
 
 export type Sources = Record<string, string>;
 
@@ -95,6 +96,7 @@ export function resolveSecrets(sources: Sources | undefined, names: string[]): R
 	const token = () => {
 		if (opToken === undefined && src.OP_SERVICE_ACCOUNT_TOKEN && !src.OP_SERVICE_ACCOUNT_TOKEN.startsWith("op:")) {
 			opToken = resolveSource(src.OP_SERVICE_ACCOUNT_TOKEN);
+			rememberSecret("OP_SERVICE_ACCOUNT_TOKEN", opToken);
 		}
 		return opToken;
 	};
@@ -103,6 +105,8 @@ export function resolveSecrets(sources: Sources | undefined, names: string[]): R
 		if (!s) throw new Error(`no source for secret ${name}`);
 		try {
 			out[name] = resolveSource(s, /^(op|github-app):/.test(s) ? token() : undefined);
+			// value: sources are configuration (vault names), not secrets.
+			if (!s.startsWith("value:")) rememberSecret(name, out[name]);
 		} catch (e) {
 			throw new Error(`secret ${name} (${s.split(":")[0]}): ${(e as Error).message.split("\n")[0]}`);
 		}
