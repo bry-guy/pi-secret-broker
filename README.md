@@ -79,7 +79,8 @@ from `globalThis[Symbol.for("pi-secret-broker.v1")]`.
 This is best-effort hygiene, not a security boundary. Values are redacted, not blocked from use: commands still get
 the env. Not covered: encoded or transformed secrets (base64, split, escaped), Kubernetes Secret `data` blobs, live
 partial output shown in the terminal while a command runs, pi's on-disk bash full-output logs, and model thinking
-blocks. Since `!command` output is filtered by running the command through pi's local shell, an extension that runs
+blocks. A secret you type yourself (in a message or after `!`) or that the model writes into a command is stored as
+typed in the session file; it is only redacted on its way to the model. Since `!command` output is filtered by running the command through pi's local shell, an extension that runs
 `!` commands elsewhere must load before this one.
 
 ## Changes from pi-ez-secret-broker 0.2
