@@ -9,7 +9,9 @@ import { execFileSync } from "node:child_process";
 import { createSign } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { homedir, userInfo } from "node:os";
-import { rememberSecret } from "./redact.ts";
+
+// With pi-redaction installed, resolved values are also redacted from every tool result. Looked up per call: load order is not fixed.
+const rememberSecret = (kind: string, value: string): void => (globalThis as any)[Symbol.for("pi-redaction.v1")]?.rememberSecret(kind, value);
 
 export type Sources = Record<string, string>;
 
