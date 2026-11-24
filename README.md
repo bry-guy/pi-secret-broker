@@ -60,28 +60,9 @@ Limit: code in the checkout runs with the action's secrets (tofu modules, script
 
 ## Redaction
 
-In every session (sandboxed or not, with or without a project or role), secret values in tool output are replaced
-by `[redacted:<kind>]` before they reach the transcript or the model:
-
-- **Known values**: env vars of the pi process whose name looks secret (`token`, `secret`, `password`, `credential`,
-  `api_key`, `private_key`, ...; 8+ chars, not a path or a plain URL), and every role secret the broker resolved.
-- **Token shapes**: GitHub, Anthropic, OpenAI-style, Slack, AWS access key ids, 1Password service-account tokens,
-  JWTs and PEM private key blocks (`PATTERNS` in `src/redact.ts`).
-- **`NAME=value` lines** with a secret-looking name, in bash output, `!command` output and reads of dotenv files
-  (`.env`, `.env.*`, `.envrc`, `*.env`; not `.env.example`/`.sample`/`.template`). The name stays, the value goes.
-  Source files are left readable.
-- Any value caught by the last two rules is remembered (up to 500) and redacted wherever it shows up later.
-
-It runs on `tool_result`, on `!command` output, and on every request's messages (`context`, as a backstop). `write`
-and `edit` calls that would put a `[redacted:` marker into a file are blocked. Other extensions can call `redact(text)`
-from `globalThis[Symbol.for("pi-secret-broker.v1")]`.
-
-This is best-effort hygiene, not a security boundary. Values are redacted, not blocked from use: commands still get
-the env. Not covered: encoded or transformed secrets (base64, split, escaped), Kubernetes Secret `data` blobs, live
-partial output shown in the terminal while a command runs, pi's on-disk bash full-output logs, and model thinking
-blocks. A secret you type yourself (in a message or after `!`) or that the model writes into a command is stored as
-typed in the session file; it is only redacted on its way to the model. Since `!command` output is filtered by running the command through pi's local shell, an extension that runs
-`!` commands elsewhere must load before this one.
+`broker_run` output has the action's secrets replaced by `[NAME]`. Redaction of secrets in every other tool result
+moved to [pi-redaction](https://github.com/bry-guy/pi-redaction); install it too. When it is loaded, every role secret
+resolved here is registered with it, so those values are redacted wherever they show up.
 
 ## Changes from pi-ez-secret-broker 0.2
 
