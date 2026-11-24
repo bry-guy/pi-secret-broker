@@ -4,10 +4,11 @@
   "description": "Role secrets for pi: resolve them on the host (Keychain, 1Password service accounts) and run role broker actions without the agent seeing them.",
   "type": "module",
   "license": "MIT",
+  "bugs": { "url": "https://github.com/bry-guy/pi-secret-broker/issues" },
   "keywords": ["pi-package", "pi-extension", "secrets", "1password", "gondolin"],
   "repository": { "type": "git", "url": "git+https://github.com/bry-guy/pi-secret-broker.git" },
   "homepage": "https://github.com/bry-guy/pi-secret-broker#readme",
-  "files": ["src", "README.md"],
+  "files": ["src", "README.md", "LICENSE"],
   "pi": { "extensions": ["./src/extension.ts"] },
   "peerDependencies": { "@earendil-works/pi-coding-agent": "*", "@earendil-works/pi-ai": "*" },
   "scripts": { "test": "node --test test/*.test.ts" }

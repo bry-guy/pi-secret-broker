@@ -9,6 +9,16 @@ Role secrets for [pi](https://github.com/earendil-works/pi), resolved on the hos
 
 Roles and grants come from [pi-projects](https://github.com/bry-guy/pi-projects) (`docs/agent-roles.md`). Install both.
 
+## Install
+
+```sh
+pi install npm:@bry-guy/pi-secret-broker
+pi install npm:@bry-guy/pi-projects
+# or from git:
+pi install git:github.com/bry-guy/pi-secret-broker
+pi install git:github.com/bry-guy/pi-projects
+```
+
 ## Secret sources
 
 In the signed grants file (`~/.pi/agent/pi-roles.json`, edited through `/project grant`), per role:
