@@ -40,6 +40,11 @@ In the signed grants file (`~/.pi/agent/pi-roles.json`, edited through `/project
 | `github-app:op://vault/item` | GitHub App installation token (1 hour), minted from the item's `app-id` and `private-key` fields and limited to the repos in its `repos` field (comma-separated names). The App must be installed on one account. Cached until 15 minutes before expiry; pi-mounts re-resolves secrets every 30 minutes. |
 | `env:NAME`, `file:path`, `value:text` | Host env var, file contents, literal |
 
+`keychain:` and `file:` sources can also be written, through `storeSecret(sources, name, value)` on
+`globalThis[Symbol.for("pi-secret-broker.v1")]`. pi-mounts uses it to keep a Google login it obtains on the host
+(the refresh token behind a role's `google-oauth` secret) without that token entering the VM. A source must already be
+declared in the signed grants file; other kinds are read-only.
+
 ## Broker actions
 
 A role file (`<repo>/.pi/roles/<role>.json`, read from origin's default branch) declares them:

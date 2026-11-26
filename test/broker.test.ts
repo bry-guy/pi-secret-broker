@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, realpathSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 
 const { prepare, execute } = await import("../src/broker.ts");
-const { resolveSecrets, redact, cleanEnv } = await import("../src/secrets.ts");
+const { resolveSecrets, redact, cleanEnv, storeSecret } = await import("../src/secrets.ts");
 
 function project() {
 	const root = realpathSync(mkdtempSync(join(tmpdir(), "broker-")));
@@ -58,4 +58,17 @@ test("redact and cleanEnv", () => {
 	assert.equal(redact("a abcdefgh b abc", { T: "abcdefgh", S: "abc" }), "a [T] b abc");
 	process.env.GH_TOKEN = "x";
 	assert.equal(cleanEnv().GH_TOKEN, undefined);
+});
+
+test("storeSecret writes declared file: sources and refuses the rest", () => {
+	const dir = realpathSync(mkdtempSync(join(tmpdir(), "store-")));
+	const sources = { TOK: `file:${dir}/sub/tok`, V: "value:x", E: "env:HOME" };
+	storeSecret(sources, "TOK", "first");
+	storeSecret(sources, "TOK", "second");
+	assert.deepEqual(resolveSecrets(sources, ["TOK"]), { TOK: "second" });
+	assert.equal(statSync(`${dir}/sub/tok`).mode & 0o777, 0o600);
+	assert.throws(() => storeSecret(sources, "V", "y"), /can't be written/);
+	assert.throws(() => storeSecret(sources, "E", "y"), /can't be written/);
+	assert.throws(() => storeSecret(sources, "MISSING", "y"), /no source/);
+	assert.throws(() => storeSecret(sources, "TOK", ""), /empty/);
 });

@@ -5,9 +5,9 @@ import { join } from "node:path";
 import { Type } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { audit, defaultAuditFile, execute, prepare } from "./broker.ts";
-import { resolveSecrets, resolveSource } from "./secrets.ts";
+import { resolveSecrets, resolveSource, storeSecret } from "./secrets.ts";
 
-(globalThis as any)[Symbol.for("pi-secret-broker.v1")] = { resolveSecrets, resolveSource };
+(globalThis as any)[Symbol.for("pi-secret-broker.v1")] = { resolveSecrets, resolveSource, storeSecret };
 
 const projects = () => (globalThis as any)[Symbol.for("pi-projects.v1")];
 
