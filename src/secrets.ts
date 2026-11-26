@@ -7,7 +7,8 @@
 // `op` never falls back to Bryan's desktop app: it runs with a clean env holding only the role's token.
 import { execFileSync } from "node:child_process";
 import { createSign } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import { homedir, userInfo } from "node:os";
 
 // With pi-redaction installed, resolved values are also redacted from every tool result. Looked up per call: load order is not fixed.
@@ -114,6 +115,29 @@ export function resolveSecrets(sources: Sources | undefined, names: string[]): R
 		}
 	}
 	return out;
+}
+
+/** Writes a new value for one of a role's secrets, for credentials the host obtains or rotates itself (pi-mounts'
+ *  Google login). Only `keychain:` and `file:` sources are writable; the source must already be declared. */
+export function storeSecret(sources: Sources | undefined, name: string, value: string): void {
+	const s = (sources ?? {})[name];
+	if (!s) throw new Error(`no source for secret ${name}`);
+	if (!value) throw new Error(`refusing to store an empty value for ${name}`);
+	const i = s.indexOf(":");
+	const scheme = s.slice(0, i);
+	const rest = s.slice(i + 1);
+	if (scheme === "keychain") {
+		// -U updates an existing item. The value is in argv for a moment, visible only to this user's processes.
+		execFileSync("security", ["add-generic-password", "-U", "-s", rest, "-a", userInfo().username, "-w", value], { stdio: "ignore" });
+	} else if (scheme === "file") {
+		const path = rest.replace(/^~(?=\/)/, homedir());
+		mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
+		writeFileSync(`${path}.tmp`, value, { mode: 0o600 });
+		renameSync(`${path}.tmp`, path);
+	} else {
+		throw new Error(`secret ${name}: ${scheme}: sources can't be written (use keychain: or file:)`);
+	}
+	rememberSecret(name, value);
 }
 
 /** Replaces secret values in text, longest first. Short values (< 6 chars) are left alone to avoid noise. */
